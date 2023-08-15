@@ -2,13 +2,15 @@ package com.example.socialassistant.screens.dayplan
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -19,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -29,11 +33,16 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,6 +86,7 @@ fun CardPSUScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Header(
     currentCardPSU: MutableState<CardPSU>,
@@ -84,6 +94,12 @@ fun Header(
     onClickAddCircle: () -> Unit,
     onClickCheckCircle: () -> Unit
 ) {
+    var openBottomSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val bottomSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
     Column(
         modifier = Modifier
             .padding(5.dp)
@@ -106,7 +122,7 @@ fun Header(
                 horizontalArrangement = Arrangement.End
             ) {
                 IconButton(onClick = {
-                    onClickAddCircle.invoke()
+                    openBottomSheet = true
                 }, content = {
                     Icon(
                         imageVector = Icons.Default.AddCircle,
@@ -152,6 +168,34 @@ fun Header(
             )
         }
     }
+    if (openBottomSheet) {
+        ModalBottomSheet(
+            sheetState = bottomSheetState,
+            onDismissRequest = { openBottomSheet = false },
+            dragHandle = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BottomSheetDefaults.DragHandle()
+                    Text(text = "Выберите задачи", fontWeight = FontWeight(600))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider()
+                }
+            }
+        ) {
+            BottomSheetContent(
+                currentCardPSU = currentCardPSU,
+                onHideButtonClick = {
+                    scope.launch {
+                        bottomSheetState.hide()
+                    }.invokeOnCompletion {
+                        if (!bottomSheetState.isVisible) openBottomSheet = false
+                    }
+                }
+            )
+        }
+    }
 }
 
 
@@ -163,7 +207,11 @@ fun TabLayout(
     taskListState: MutableState<List<Task>>,
     checkedState: MutableState<Boolean>,
 ) {
-    val tabList = ContractType.values().map { it.type }
+    val tabList = listOf(
+        ContractType.Standard.type,
+        ContractType.AboveStandard.type,
+        ContractType.Commercial.type
+    )
     val pagerState = rememberPagerState { tabList.size }
     val tabIndex = pagerState.currentPage
     val coroutineScope = rememberCoroutineScope()
@@ -196,7 +244,7 @@ fun TabLayout(
             modifier = Modifier
                 .weight(1.0f),
         ) { index ->
-            val allTasksList = currentCardPSU.value.taskList
+            val allTasksList = currentCardPSU.value.taskList.filter { n -> !n.additionalTask }
             taskListState.value = when (index) {
                 0 -> allTasksList.filter { n -> n.contract == ContractType.Standard }
                     .sortedBy { it.done }
@@ -245,10 +293,6 @@ fun TaskItem(
             .fillMaxWidth()
             .padding(3.dp)
             .border(1.dp, MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(7.dp))
-            .clickable {
-                //currentTask.value = item
-                //onClick()
-            }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
@@ -289,8 +333,9 @@ fun TaskItem(
                         modifier = Modifier,
                         text = item.contract.type,
                     )
+                    checkedState.value = item.done
                     Checkbox(
-                        checked = item.done,
+                        checked = checkedState.value,
                         onCheckedChange = {
                             checkedState.value = it
                             val newList = taskListState.value
@@ -299,6 +344,76 @@ fun TaskItem(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomSheetContent(
+    currentCardPSU: MutableState<CardPSU>,
+    onHideButtonClick: () -> Unit
+) {
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        itemsIndexed(
+            currentCardPSU.value.taskList.filter { n -> n.additionalTask }
+        ) {index, item ->
+            AdditionalTaskItem(item, index, currentCardPSU)
+        }
+        item {
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    onHideButtonClick()
+                }) {
+                Text("Сохранить")
+            }
+        }
+    }
+
+}
+
+@Composable
+fun AdditionalTaskItem(item: Task, index: Int, currentCardPSU: MutableState<CardPSU>,) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = "${index + 1}. ${item.taskItself}"
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    modifier = Modifier,
+                    text = "${item.price} р/мес",
+                )
+                Text(
+                    modifier = Modifier,
+                    text = item.contract.type,
+                )
+                //checkedState.value = item.done
+                Checkbox(
+                    //checked = checkedState.value,
+                    checked = false,
+                    onCheckedChange = {
+//                        checkedState.value = it
+//                        val newList = taskListState.value
+//                        newList[index].done = checkedState.value
+//                        taskListState.value = newList.sortedBy { a -> a.done }
+                    }
+                )
             }
         }
     }

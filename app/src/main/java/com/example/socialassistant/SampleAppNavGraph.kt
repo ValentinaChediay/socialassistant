@@ -1,5 +1,6 @@
 package com.example.socialassistant
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -44,6 +45,7 @@ import com.example.socialassistant.screens.StatisticsScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SampleAppNavGraph(
@@ -64,28 +66,34 @@ fun SampleAppNavGraph(
             "09:00 - 10:00",
             PSU("Петрова", "Инна", "Владимировна", 80, "г.Оренбург ул. Лесная д.2 кв.8"),
             mutableListOf(
-                Task("Помыть полы", 1f, ContractType.Standard, true),
-                Task("Почитать", 5f, ContractType.Commercial, false),
-                Task("Измерить температуру", 5f, ContractType.Standard, false),
-                Task("Измерить давление", 5f, ContractType.Standard, false),
-                Task("Погулять", 5f, ContractType.AboveStandard, false),
+                Task("Помыть полы", 1f, ContractType.Standard, done = true, additionalTask = false),
+                Task("Почитать", 5f, ContractType.Commercial, done = false, additionalTask = false),
+                Task("Измерить температуру", 5f, ContractType.Standard, done = false, additionalTask = false),
+                Task("Измерить давление", 5f, ContractType.Standard, done = false, additionalTask = false),
+                Task("Погулять", 5f, ContractType.AboveStandard, done = false, additionalTask = false),
+                Task("Покормить домашних животных", 1f, ContractType.Commercial, done = false, additionalTask = true),
+                Task("Вынести мусор", 5f, ContractType.Standard, done = false, additionalTask = true)
             )
         ),
         CardPSU(
             "11:00 - 11:30",
             PSU("Семенов", "Иван", "Андреевич", 82, "г.Оренбург ул. Солнечная д.5 кв.82"),
             mutableListOf(
-                Task("Измерить температуру", 5f, ContractType.Standard, false),
-                Task("Измерить давление", 5f, ContractType.Standard, false),
-                Task("Погулять", 5f, ContractType.AboveStandard, true),
+                Task("Измерить температуру", 5f, ContractType.Standard, done = false, additionalTask = false),
+                Task("Измерить давление", 5f, ContractType.Standard, done = false, additionalTask = false),
+                Task("Погулять", 5f, ContractType.AboveStandard, done = true, additionalTask = false),
+                Task("Покормить собаку", 1f, ContractType.Commercial, done = false, additionalTask = true),
+                Task("Вынести мусор", 5f, ContractType.Standard, done = false, additionalTask = true)
             )
         ),
         CardPSU(
             "15:00 - 16:30",
             PSU("Филиппов", "Антон", "Валерьевич", 71, "г.Оренбург ул. Орская д.10 кв.17"),
             mutableListOf(
-                Task("Почитать", 5f, ContractType.Commercial, false),
-                Task("Погулять", 5f, ContractType.AboveStandard, true),
+                Task("Почитать", 5f, ContractType.Commercial, done = false, additionalTask = false),
+                Task("Погулять", 5f, ContractType.AboveStandard, done = true, additionalTask = false),
+                Task("Сводить к врачу", 1f, ContractType.Commercial, done = false, additionalTask = true),
+                Task("Сводить на танцы", 5f, ContractType.Standard, done = false, additionalTask = true)
             )
         )
     )
@@ -109,6 +117,10 @@ fun SampleAppNavGraph(
     }
 
     val checkedState = remember {
+        mutableStateOf(false)
+    }
+
+    val checkedStateAdditionalTask = remember {
         mutableStateOf(false)
     }
 

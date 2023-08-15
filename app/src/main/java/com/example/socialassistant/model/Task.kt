@@ -4,5 +4,6 @@ data class Task(
     val taskItself: String,
     val price: Float,
     val contract: ContractType,
-    var done: Boolean
+    var done: Boolean,
+    var additionalTask: Boolean
 )
