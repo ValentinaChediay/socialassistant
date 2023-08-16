@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -61,6 +62,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CardPSUScreen(
     viewModel: SocialAssistantViewModel,
@@ -68,8 +70,11 @@ fun CardPSUScreen(
     onClickCheckCircle: () -> Unit,
     onLongPress: () -> Unit
 ) {
+    val tabList = ContractType.values().map { it.type }
+    val pagerState = rememberPagerState { tabList.size }
     Column {
         Header(
+            pagerState,
             viewModel,
             onClickArrowBack = {
                 onClickArrowBack()
@@ -77,13 +82,14 @@ fun CardPSUScreen(
             onClickCheckCircle = {
                 onClickCheckCircle()
             })
-        TabLayout(viewModel) { onLongPress() }
+        TabLayout(tabList, pagerState, viewModel) { onLongPress() }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun Header(
+    pagerState: PagerState,
     viewModel: SocialAssistantViewModel,
     onClickArrowBack: () -> Unit,
     onClickCheckCircle: () -> Unit
@@ -188,7 +194,11 @@ fun Header(
                 onHideButtonClick = {
                     scope.launch {
                         // логика, чтоб таб текущий таб обновился сразу после кнопки Сохранить, а не после переключения
-                        val currentType = viewModel.selectedTasksListState[0].contract
+                        val currentType = when (pagerState.currentPage) {
+                            0 -> ContractType.Standard
+                            1 -> ContractType.AboveStandard
+                            else -> ContractType.Commercial
+                        }
                         val newList = mutableListOf<Task>()
                         for (i in viewModel.selectedTasksListState) {
                             newList.add(i)
@@ -213,11 +223,11 @@ fun Header(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TabLayout(
+    tabList: List<String>,
+    pagerState: PagerState,
     viewModel: SocialAssistantViewModel,
     onLongPress: () -> Unit
 ) {
-    val tabList = ContractType.values().map { it.type }
-    val pagerState = rememberPagerState { tabList.size }
     val tabIndex = pagerState.currentPage
     val coroutineScope = rememberCoroutineScope()
     val allSelectedTasksList: List<Task> =
