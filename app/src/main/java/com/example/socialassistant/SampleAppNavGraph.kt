@@ -19,7 +19,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -42,6 +41,7 @@ import com.example.socialassistant.screens.ScheduleScreen
 import com.example.socialassistant.screens.ServiceRecipientSurveyScreen
 import com.example.socialassistant.screens.SettingsScreen
 import com.example.socialassistant.screens.StatisticsScreen
+import com.example.socialassistant.screens.dayplan.ChoosingServicesToTransfer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SampleAppNavGraph(
+    viewModel: SocialAssistantViewModel,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
@@ -66,63 +67,149 @@ fun SampleAppNavGraph(
             "09:00 - 10:00",
             PSU("Петрова", "Инна", "Владимировна", 80, "г.Оренбург ул. Лесная д.2 кв.8"),
             mutableListOf(
-                Task("Помыть полы", 1f, ContractType.Standard, done = true, additionalTask = false),
-                Task("Почитать", 5f, ContractType.Commercial, done = false, additionalTask = false),
-                Task("Измерить температуру", 5f, ContractType.Standard, done = false, additionalTask = false),
-                Task("Измерить давление", 5f, ContractType.Standard, done = false, additionalTask = false),
-                Task("Погулять", 5f, ContractType.AboveStandard, done = false, additionalTask = false),
-                Task("Покормить домашних животных", 1f, ContractType.Commercial, done = false, additionalTask = true),
-                Task("Вынести мусор", 5f, ContractType.Standard, done = false, additionalTask = true)
+                Task(
+                    "Помыть полы",
+                    1f,
+                    ContractType.Standard,
+                    done = true,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Почитать",
+                    5f,
+                    ContractType.Commercial,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Измерить температуру",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Измерить давление",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Погулять",
+                    5f,
+                    ContractType.AboveStandard,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Покормить домашних животных",
+                    1f,
+                    ContractType.Commercial,
+                    done = false,
+                    selected = false,
+                    rescheduled = false
+                ),
+                Task(
+                    "Вынести мусор",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = false,
+                    rescheduled = false
+                )
             )
         ),
         CardPSU(
             "11:00 - 11:30",
             PSU("Семенов", "Иван", "Андреевич", 82, "г.Оренбург ул. Солнечная д.5 кв.82"),
             mutableListOf(
-                Task("Измерить температуру", 5f, ContractType.Standard, done = false, additionalTask = false),
-                Task("Измерить давление", 5f, ContractType.Standard, done = false, additionalTask = false),
-                Task("Погулять", 5f, ContractType.AboveStandard, done = true, additionalTask = false),
-                Task("Покормить собаку", 1f, ContractType.Commercial, done = false, additionalTask = true),
-                Task("Вынести мусор", 5f, ContractType.Standard, done = false, additionalTask = true)
+                Task(
+                    "Измерить температуру",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Измерить давление",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Погулять",
+                    5f,
+                    ContractType.AboveStandard,
+                    done = true,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Покормить собаку",
+                    1f,
+                    ContractType.Commercial,
+                    done = false,
+                    selected = false,
+                    rescheduled = false
+                ),
+                Task(
+                    "Вынести мусор",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = false,
+                    rescheduled = false
+                )
             )
         ),
         CardPSU(
             "15:00 - 16:30",
             PSU("Филиппов", "Антон", "Валерьевич", 71, "г.Оренбург ул. Орская д.10 кв.17"),
             mutableListOf(
-                Task("Почитать", 5f, ContractType.Commercial, done = false, additionalTask = false),
-                Task("Погулять", 5f, ContractType.AboveStandard, done = true, additionalTask = false),
-                Task("Сводить к врачу", 1f, ContractType.Commercial, done = false, additionalTask = true),
-                Task("Сводить на танцы", 5f, ContractType.Standard, done = false, additionalTask = true)
+                Task(
+                    "Почитать",
+                    5f,
+                    ContractType.Commercial,
+                    done = false,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Погулять",
+                    5f,
+                    ContractType.AboveStandard,
+                    done = true,
+                    selected = true,
+                    rescheduled = false
+                ),
+                Task(
+                    "Сводить к врачу",
+                    1f,
+                    ContractType.Commercial,
+                    done = false,
+                    selected = false,
+                    rescheduled = false
+                ),
+                Task(
+                    "Сводить на танцы",
+                    5f,
+                    ContractType.Standard,
+                    done = false,
+                    selected = false,
+                    rescheduled = false
+                )
             )
         )
     )
-
-    val currentCardPSU = remember {
-        mutableStateOf(
-            cardPSUItems[0]
-        )
-    }
-
-    val currentTask = remember {
-        mutableStateOf(
-            cardPSUItems[0].taskList[0]
-        )
-    }
-
-    val taskListState = remember {
-        mutableStateOf(
-            cardPSUItems[0].taskList
-        )
-    }
-
-    val checkedState = remember {
-        mutableStateOf(false)
-    }
-
-    val checkedStateAdditionalTask = remember {
-        mutableStateOf(false)
-    }
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -165,7 +252,7 @@ fun SampleAppNavGraph(
                 modifier = modifier.padding(it)
             ) {
                 composable(route = AllDestinations.DAY_PLAN) {
-                    DayPlanScreen(cardPSUItems, currentCardPSU) {
+                    DayPlanScreen(cardPSUItems, viewModel) {
                         navController.navigate(AllDestinations.CARD_PSU)
                     }
                 }
@@ -192,13 +279,13 @@ fun SampleAppNavGraph(
                 }
                 composable(route = AllDestinations.CARD_PSU) {
                     CardPSUScreen(
-                        currentCardPSU,
-                        currentTask,
-                        taskListState,
-                        checkedState,
+                        viewModel,
                         { navController.navigate(AllDestinations.DAY_PLAN) },
                         {},
-                        {})
+                        { navController.navigate(AllDestinations.CHOOSING_SERVICES_TO_TRANSFER) })
+                }
+                composable(route = AllDestinations.CHOOSING_SERVICES_TO_TRANSFER) {
+                    ChoosingServicesToTransfer(viewModel) { navController.navigate(AllDestinations.CARD_PSU) }
                 }
             }
         }

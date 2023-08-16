@@ -37,7 +37,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,9 +48,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.example.socialassistant.model.CardPSU
+import androidx.compose.ui.unit.sp
+import com.example.socialassistant.SocialAssistantViewModel
 import com.example.socialassistant.model.ContractType
 import com.example.socialassistant.model.Task
 import com.example.socialassistant.ui.theme.Green
@@ -62,36 +63,29 @@ import java.util.Locale
 
 @Composable
 fun CardPSUScreen(
-    currentCardPSU: MutableState<CardPSU>,
-    currentTask: MutableState<Task>,
-    taskListState: MutableState<List<Task>>,
-    checkedState: MutableState<Boolean>,
+    viewModel: SocialAssistantViewModel,
     onClickArrowBack: () -> Unit,
-    onClickAddCircle: () -> Unit,
-    onClickCheckCircle: () -> Unit
+    onClickCheckCircle: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     Column {
         Header(
-            currentCardPSU,
+            viewModel,
             onClickArrowBack = {
                 onClickArrowBack()
-            },
-            onClickAddCircle = {
-                onClickAddCircle()
             },
             onClickCheckCircle = {
                 onClickCheckCircle()
             })
-        TabLayout(currentCardPSU, currentTask, taskListState, checkedState)
+        TabLayout(viewModel) { onLongPress() }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Header(
-    currentCardPSU: MutableState<CardPSU>,
+    viewModel: SocialAssistantViewModel,
     onClickArrowBack: () -> Unit,
-    onClickAddCircle: () -> Unit,
     onClickCheckCircle: () -> Unit
 ) {
     var openBottomSheet by remember { mutableStateOf(false) }
@@ -155,23 +149,28 @@ fun Header(
             )
             Text(
                 modifier = Modifier.padding(bottom = 8.dp),
-                text = currentCardPSU.value.timeInterval,
+                text = viewModel.currentCardPSU.timeInterval,
                 textDecoration = TextDecoration.Underline
             )
             Text(
                 modifier = Modifier.padding(bottom = 8.dp),
-                text = "${currentCardPSU.value.psu.lastName} ${currentCardPSU.value.psu.firstName} ${currentCardPSU.value.psu.surname}",
+                text = "${viewModel.currentCardPSU.psu.lastName} ${viewModel.currentCardPSU.psu.firstName} ${viewModel.currentCardPSU.psu.surname}",
                 fontWeight = FontWeight(600)
             )
             Text(
-                text = currentCardPSU.value.psu.address
+                text = viewModel.currentCardPSU.psu.address
             )
         }
     }
     if (openBottomSheet) {
         ModalBottomSheet(
             sheetState = bottomSheetState,
-            onDismissRequest = { openBottomSheet = false },
+            onDismissRequest = {
+                for (i in viewModel.unselectedTasksListState) {
+                    i.selected = false
+                }
+                openBottomSheet = false
+            },
             dragHandle = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -185,9 +184,21 @@ fun Header(
             }
         ) {
             BottomSheetContent(
-                currentCardPSU = currentCardPSU,
+                viewModel = viewModel,
                 onHideButtonClick = {
                     scope.launch {
+                        // логика, чтоб таб текущий таб обновился сразу после кнопки Сохранить, а не после переключения
+                        val currentType = viewModel.selectedTasksListState[0].contract
+                        val newList = mutableListOf<Task>()
+                        for (i in viewModel.selectedTasksListState) {
+                            newList.add(i)
+                        }
+                        for (i in viewModel.unselectedTasksListState) {
+                            if (i.selected && (i.contract == currentType)) {
+                                newList.add(i)
+                            }
+                        }
+                        viewModel.selectedTasksListState = newList.sortedBy { n -> n.done }
                         bottomSheetState.hide()
                     }.invokeOnCompletion {
                         if (!bottomSheetState.isVisible) openBottomSheet = false
@@ -202,19 +213,15 @@ fun Header(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TabLayout(
-    currentCardPSU: MutableState<CardPSU>,
-    currentTask: MutableState<Task>,
-    taskListState: MutableState<List<Task>>,
-    checkedState: MutableState<Boolean>,
+    viewModel: SocialAssistantViewModel,
+    onLongPress: () -> Unit
 ) {
-    val tabList = listOf(
-        ContractType.Standard.type,
-        ContractType.AboveStandard.type,
-        ContractType.Commercial.type
-    )
+    val tabList = ContractType.values().map { it.type }
     val pagerState = rememberPagerState { tabList.size }
     val tabIndex = pagerState.currentPage
     val coroutineScope = rememberCoroutineScope()
+    val allSelectedTasksList: List<Task> =
+        viewModel.currentCardPSU.taskList.filter { n -> n.selected }.filter { n -> !n.rescheduled }
 
     Column(
         modifier = Modifier
@@ -234,7 +241,7 @@ fun TabLayout(
                         }
                     },
                     text = {
-                        Text(text = text)
+                        Text(text = text, fontSize = 11.sp)
                     },
                 )
             }
@@ -243,38 +250,34 @@ fun TabLayout(
             state = pagerState,
             modifier = Modifier
                 .weight(1.0f),
-        ) { index ->
-            val allTasksList = currentCardPSU.value.taskList.filter { n -> !n.additionalTask }
-            taskListState.value = when (index) {
-                0 -> allTasksList.filter { n -> n.contract == ContractType.Standard }
+        ) {
+            viewModel.selectedTasksListState = when (pagerState.currentPage) {
+                0 -> allSelectedTasksList.filter { n -> n.contract == ContractType.Standard }
                     .sortedBy { it.done }
 
-                1 -> allTasksList.filter { n -> n.contract == ContractType.AboveStandard }
+                1 -> allSelectedTasksList.filter { n -> n.contract == ContractType.AboveStandard }
                     .sortedBy { it.done }
 
-                else -> allTasksList.filter { n -> n.contract == ContractType.Commercial }
+                else -> allSelectedTasksList.filter { n -> n.contract == ContractType.Commercial }
                     .sortedBy { it.done }
             }
-
-            TaskList(taskListState, checkedState, currentCardPSU = currentCardPSU, currentTask)
         }
+        TaskList(viewModel) { onLongPress() }
     }
 }
 
 @Composable
 fun TaskList(
-    taskListState: MutableState<List<Task>>,
-    checkedState: MutableState<Boolean>,
-    currentCardPSU: MutableState<CardPSU>,
-    currentTask: MutableState<Task>,
+    viewModel: SocialAssistantViewModel,
+    onLongPress: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize()
     ) {
         itemsIndexed(
-            taskListState.value
+            viewModel.selectedTasksListState
         ) { index, item ->
-            TaskItem(item, index, taskListState, checkedState, currentTask, {})
+            TaskItem(item, index, viewModel) { onLongPress() }
         }
     }
 }
@@ -283,10 +286,8 @@ fun TaskList(
 fun TaskItem(
     item: Task,
     index: Int,
-    taskListState: MutableState<List<Task>>,
-    checkedState: MutableState<Boolean>,
-    currentTask: MutableState<Task>,
-    onClick: () -> Unit
+    viewModel: SocialAssistantViewModel,
+    onLongPress: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -296,6 +297,8 @@ fun TaskItem(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
+                        //item.rescheduled = true
+                        onLongPress()
                         println("LongPress")
                     }
                 )
@@ -333,14 +336,14 @@ fun TaskItem(
                         modifier = Modifier,
                         text = item.contract.type,
                     )
-                    checkedState.value = item.done
+                    viewModel.doneState = item.done
                     Checkbox(
-                        checked = checkedState.value,
+                        checked = viewModel.doneState,
                         onCheckedChange = {
-                            checkedState.value = it
-                            val newList = taskListState.value
-                            newList[index].done = checkedState.value
-                            taskListState.value = newList.sortedBy { a -> a.done }
+                            viewModel.doneState = it
+                            val newList = viewModel.selectedTasksListState
+                            newList[index].done = viewModel.doneState
+                            viewModel.selectedTasksListState = newList.sortedBy { a -> a.done }
                         }
                     )
                 }
@@ -351,30 +354,39 @@ fun TaskItem(
 
 @Composable
 fun BottomSheetContent(
-    currentCardPSU: MutableState<CardPSU>,
+    viewModel: SocialAssistantViewModel,
     onHideButtonClick: () -> Unit
 ) {
-    LazyColumn(contentPadding = PaddingValues(16.dp)) {
-        itemsIndexed(
-            currentCardPSU.value.taskList.filter { n -> n.additionalTask }
-        ) {index, item ->
-            AdditionalTaskItem(item, index, currentCardPSU)
-        }
-        item {
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    onHideButtonClick()
-                }) {
-                Text("Сохранить")
+    viewModel.unselectedTasksListState =
+        viewModel.currentCardPSU.taskList.filter { n -> !n.selected }
+    if (viewModel.unselectedTasksListState.isEmpty()) {
+        Text(
+            text = "Список не выбранных задач пуст", modifier = Modifier
+                .padding(top = 30.dp, bottom = 30.dp)
+                .fillMaxWidth(), textAlign = TextAlign.Center
+        )
+    } else {
+        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+            itemsIndexed(
+                viewModel.unselectedTasksListState
+            ) { index, item ->
+                AdditionalTaskItem(item, index, viewModel)
+            }
+            item {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        onHideButtonClick()
+                    }) {
+                    Text("Сохранить")
+                }
             }
         }
     }
-
 }
 
 @Composable
-fun AdditionalTaskItem(item: Task, index: Int, currentCardPSU: MutableState<CardPSU>,) {
+fun AdditionalTaskItem(item: Task, index: Int, viewModel: SocialAssistantViewModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth(),
@@ -403,15 +415,14 @@ fun AdditionalTaskItem(item: Task, index: Int, currentCardPSU: MutableState<Card
                     modifier = Modifier,
                     text = item.contract.type,
                 )
-                //checkedState.value = item.done
+                viewModel.selectedState = item.selected
                 Checkbox(
-                    //checked = checkedState.value,
-                    checked = false,
+                    checked = viewModel.selectedState,
                     onCheckedChange = {
-//                        checkedState.value = it
-//                        val newList = taskListState.value
-//                        newList[index].done = checkedState.value
-//                        taskListState.value = newList.sortedBy { a -> a.done }
+                        viewModel.selectedState = it
+                        val newList = viewModel.unselectedTasksListState
+                        newList[index].selected = viewModel.selectedState
+                        viewModel.unselectedTasksListState = newList
                     }
                 )
             }

@@ -13,19 +13,19 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.example.socialassistant.SocialAssistantViewModel
 import com.example.socialassistant.model.CardPSU
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun DayPlanScreen(cardPSUItems: List<CardPSU>, currentCardPSU: MutableState<CardPSU>, onClick: () -> Unit) {
+fun DayPlanScreen(cardPSUItems: List<CardPSU>, viewModel: SocialAssistantViewModel, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .padding(10.dp)
@@ -38,21 +38,21 @@ fun DayPlanScreen(cardPSUItems: List<CardPSU>, currentCardPSU: MutableState<Card
                 .fillMaxWidth()
         ) {
             itemsIndexed(cardPSUItems) { _, item ->
-                ListItem(item = item, currentCardPSU = currentCardPSU) { onClick() }
+                ListItem(item = item, viewModel) { onClick() }
             }
         }
     }
 }
 
 @Composable
-fun ListItem(item: CardPSU, currentCardPSU: MutableState<CardPSU>, onClick: () -> Unit) {
+fun ListItem(item: CardPSU, viewModel: SocialAssistantViewModel, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(3.dp)
             .border(1.dp, MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(7.dp))
             .clickable {
-                currentCardPSU.value = item
+                viewModel.currentCardPSU = item
                 onClick()
             },
         colors = CardDefaults.cardColors(

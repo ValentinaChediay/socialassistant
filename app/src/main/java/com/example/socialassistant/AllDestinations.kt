@@ -2,6 +2,7 @@ package com.example.socialassistant
 
 import androidx.navigation.NavHostController
 import com.example.socialassistant.AllDestinations.CARD_PSU
+import com.example.socialassistant.AllDestinations.CHOOSING_SERVICES_TO_TRANSFER
 import com.example.socialassistant.AllDestinations.DAY_PLAN
 import com.example.socialassistant.AllDestinations.SCHEDULE
 import com.example.socialassistant.AllDestinations.SERVICE_RECIPIENT_SURVEY
@@ -14,6 +15,7 @@ import com.example.socialassistant.AllDestinations.EXIT
 object AllDestinations {
     const val DAY_PLAN = "План дня"
     const val CARD_PSU = "Карточка ПСУ"
+    const val CHOOSING_SERVICES_TO_TRANSFER = "Выбор услуг для переноса"
 
     const val SCHEDULE = "График"
     const val SERVICE_RECIPIENT_SURVEY = "Опрос получателя услуг"
@@ -78,6 +80,13 @@ class AppNavigationActions(private val navController: NavHostController) {
 
     fun navigateToCardPSU() {
         navController.navigate(CARD_PSU) {
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    fun navigateToChoosingServicesToTransfer() {
+        navController.navigate(CHOOSING_SERVICES_TO_TRANSFER) {
             launchSingleTop = true
             restoreState = true
         }

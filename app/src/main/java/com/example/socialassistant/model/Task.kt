@@ -5,5 +5,6 @@ data class Task(
     val price: Float,
     val contract: ContractType,
     var done: Boolean,
-    var additionalTask: Boolean
+    var selected: Boolean,
+    var rescheduled: Boolean
 )
